@@ -199,7 +199,8 @@ const wire = task('lz:sdk:wire', 'Wire LayerZero contracts with automatic config
                 )
             } else {
                 // Wire both GM and GLV
-                const tokenTypes: ('GM' | 'GLV')[] = ['GM', 'GLV']
+                const { getAvailableTokenTypes } = await import('../devtools/deploy/utils')
+                const tokenTypes = await getAvailableTokenTypes(marketPair)
 
                 for (const type of tokenTypes) {
                     // Determine signer based on token type

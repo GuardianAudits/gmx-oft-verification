@@ -50,6 +50,10 @@ const sendTokens = task('lz:sdk:vape:send-tokens', 'Send tokens to all peer netw
             // Get deployment config
             const { marketPairConfig } = await getDeployConfig()
             const tokenConfig = tokenType === 'GM' ? marketPairConfig.GM : marketPairConfig.GLV
+            
+            if (!tokenConfig) {
+                throw new Error(`${tokenType} token is not configured for market pair ${marketPair}`)
+            }
 
             // Get current network EID
             const currentNetworkEid = (hre.network.config as { eid?: number }).eid

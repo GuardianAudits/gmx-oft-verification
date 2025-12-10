@@ -118,8 +118,21 @@ function formatTable(results: ValidationResult[]): void {
     }
 }
 
-task('lz:sdk:validate-config', 'Validates the devtools configuration against on-chain token data').setAction(
-    async (taskArgs, hre: HardhatRuntimeEnvironment) => {
+interface ValidateConfigArgs {
+    marketPair?: string
+    tokenType?: 'GM' | 'GLV'
+}
+
+task('lz:sdk:validate-config', 'Validates the devtools configuration against on-chain token data')
+    .addOptionalParam('marketPair', 'Filter by specific market pair (e.g., WETH_USDC)')
+    .addOptionalParam('tokenType', 'Filter by token type (GM or GLV)')
+    .setAction(async (taskArgs: ValidateConfigArgs, hre: HardhatRuntimeEnvironment) => {
+        const { marketPair: filterMarketPair, tokenType: filterTokenType } = taskArgs
+
+        // Validate token type if provided
+        if (filterTokenType && !['GM', 'GLV'].includes(filterTokenType)) {
+            throw new Error(`Invalid token type: ${filterTokenType}. Must be GM or GLV`)
+        }
         console.log('Starting configuration validation...\n')
 
         // First, validate that hub networks are not in expansion networks
@@ -139,16 +152,17 @@ task('lz:sdk:validate-config', 'Validates the devtools configuration against on-
 
         // Process each market pair in the config
         for (const [marketPairKey, marketPairConfig] of Object.entries(Tokens)) {
+            // Only validate if GLV is configured
+            if (!marketPairConfig.GLV) {
+                console.log(`⏭️  Skipping ${marketPairKey} - no GLV token configured`)
+                continue
+            }
+            
             console.log(`📈 Processing ${marketPairKey} GLV...`)
 
             try {
                 // Validate GLV token only
-                const glvResult = await validateTokenConfig(
-                    hre,
-                    marketPairKey,
-                    'GLV',
-                    marketPairConfig.GLV as TokenConfig
-                )
+                const glvResult = await validateTokenConfig(hre, marketPairKey, 'GLV', marketPairConfig.GLV)
                 results.push(glvResult)
             } catch (error) {
                 console.error(`   ❌ Error validating ${marketPairKey} GLV:`, error)

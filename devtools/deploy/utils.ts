@@ -30,7 +30,9 @@ export async function getDeployConfig(): Promise<DeployConfig> {
     const maxKeyLength = Math.max(...availableKeys.map((key) => key.length))
 
     availableKeys.forEach((key) => {
-        console.log(`   MARKET_PAIR=${key.padEnd(maxKeyLength)}  # ${Tokens[key].GLV.tokenSymbol}`)
+        const config = Tokens[key]
+        const symbol = config.GLV?.tokenSymbol || config.GM?.tokenSymbol || 'Unknown'
+        console.log(`   MARKET_PAIR=${key.padEnd(maxKeyLength)}  # ${symbol}`)
     })
 
     console.log('\n💡 Usage examples:')
@@ -81,7 +83,10 @@ export function isHubInNetworks(
     tokenType: 'GM' | 'GLV',
     networkEids: number[]
 ): boolean {
-    const hubEid = marketPairConfig[tokenType].hubNetwork.eid
+    const tokenConfig = marketPairConfig[tokenType]
+    if (!tokenConfig) return false
+    
+    const hubEid = tokenConfig.hubNetwork.eid
     return networkEids.includes(hubEid)
 }
 
@@ -90,26 +95,33 @@ export function isHubInNetworks(
  * Throws an error if validation fails
  */
 export function validateHubNetworksNotInExpansion(marketPairConfig: MarketPairConfig): void {
-    const glvHubEid = marketPairConfig.GLV.hubNetwork.eid
-    const gmHubEid = marketPairConfig.GM.hubNetwork.eid
-    const glvExpansionNetworks = marketPairConfig.GLV.expansionNetworks || []
-    const gmExpansionNetworks = marketPairConfig.GM.expansionNetworks || []
-
     const errors: string[] = []
 
-    if (glvExpansionNetworks.includes(glvHubEid)) {
+    const glvConfig = marketPairConfig.GLV
+    const gmConfig = marketPairConfig.GM
+
+    if (!glvConfig && !gmConfig) {
+        throw new Error('Market pair must have at least one token (GM or GLV)')
+    }
+
+    const glvHubEid = glvConfig?.hubNetwork.eid
+    const gmHubEid = gmConfig?.hubNetwork.eid
+    const glvExpansionNetworks = glvConfig?.expansionNetworks || []
+    const gmExpansionNetworks = gmConfig?.expansionNetworks || []
+
+    if (glvConfig && glvHubEid && glvExpansionNetworks.includes(glvHubEid)) {
         errors.push(`GLV hub network (EID: ${glvHubEid}) should not be in GLV expansion networks`)
     }
 
-    if (glvExpansionNetworks.includes(gmHubEid)) {
+    if (glvConfig && gmHubEid && glvExpansionNetworks.includes(gmHubEid)) {
         errors.push(`GM hub network (EID: ${gmHubEid}) should not be in GLV expansion networks`)
     }
 
-    if (gmExpansionNetworks.includes(glvHubEid)) {
+    if (gmConfig && glvHubEid && gmExpansionNetworks.includes(glvHubEid)) {
         errors.push(`GLV hub network (EID: ${glvHubEid}) should not be in GM expansion networks`)
     }
 
-    if (gmExpansionNetworks.includes(gmHubEid)) {
+    if (gmConfig && gmHubEid && gmExpansionNetworks.includes(gmHubEid)) {
         errors.push(`GM hub network (EID: ${gmHubEid}) should not be in GM expansion networks`)
     }
 
@@ -128,12 +140,12 @@ export function shouldDeployToNetwork(marketPairConfig: MarketPairConfig, curren
     const gmConfig = marketPairConfig.GM
 
     // Check if current EID is a hub network
-    const isGlvHub = glvConfig.hubNetwork.eid === currentEid
-    const isGmHub = gmConfig.hubNetwork.eid === currentEid
+    const isGlvHub = glvConfig ? glvConfig.hubNetwork.eid === currentEid : false
+    const isGmHub = gmConfig ? gmConfig.hubNetwork.eid === currentEid : false
 
     // Check if current EID is in expansion networks
-    const isGlvExpansion = glvConfig.expansionNetworks?.includes(currentEid) || false
-    const isGmExpansion = gmConfig.expansionNetworks?.includes(currentEid) || false
+    const isGlvExpansion = glvConfig?.expansionNetworks?.includes(currentEid) || false
+    const isGmExpansion = gmConfig?.expansionNetworks?.includes(currentEid) || false
 
     return isGlvHub || isGmHub || isGlvExpansion || isGmExpansion
 }
@@ -143,6 +155,8 @@ export function shouldDeployToNetwork(marketPairConfig: MarketPairConfig, curren
  */
 export function isHubNetwork(marketPairConfig: MarketPairConfig, tokenType: 'GM' | 'GLV', currentEid: number): boolean {
     const tokenConfig = marketPairConfig[tokenType]
+    if (!tokenConfig) return false
+    
     return tokenConfig.hubNetwork.eid === currentEid
 }
 
@@ -155,6 +169,10 @@ export function getContractAddress(
     currentEid: number
 ): string {
     const tokenConfig = marketPairConfig[tokenType]
+    
+    if (!tokenConfig) {
+        throw new Error(`${tokenType} token is not configured for this market pair`)
+    }
 
     // Check if we're on the hub network
     if (tokenConfig.hubNetwork.eid === currentEid) {
@@ -165,4 +183,38 @@ export function getContractAddress(
         `No contract address configured for ${tokenType} token on network EID ${currentEid}. ` +
             `Hub network is EID ${tokenConfig.hubNetwork.eid}`
     )
+}
+
+/**
+ * Gets available token types for a market pair
+ * Returns an array of configured token types ('GM' and/or 'GLV')
+ * Throws an error if no tokens are configured
+ */
+export async function getAvailableTokenTypes(marketPairKey: string): Promise<('GM' | 'GLV')[]> {
+    const tokenTypes: ('GM' | 'GLV')[] = []
+    
+    // Get market pair config
+    const oldMarketPair = process.env.MARKET_PAIR
+    process.env.MARKET_PAIR = marketPairKey
+    
+    try {
+        const { marketPairConfig } = await getDeployConfig()
+        
+        // Add token types that are configured
+        if (marketPairConfig.GM) tokenTypes.push('GM')
+        if (marketPairConfig.GLV) tokenTypes.push('GLV')
+        
+        if (tokenTypes.length === 0) {
+            throw new Error(`No tokens configured for market pair ${marketPairKey}`)
+        }
+        
+        return tokenTypes
+    } finally {
+        // Restore original MARKET_PAIR environment variable
+        if (oldMarketPair === undefined) {
+            delete process.env.MARKET_PAIR
+        } else {
+            process.env.MARKET_PAIR = oldMarketPair
+        }
+    }
 }
