@@ -51,6 +51,28 @@ const WBTC_USDC: MarketPairConfig = {
     },
 }
 
+const WETH_WETH: MarketPairConfig = {
+    GM: {
+        tokenSymbol: 'GM: ETH/USD [WETH-WETH]',
+        hubNetwork: {
+            eid: EndpointId.ARBITRUM_V2_MAINNET,
+            contractAddress: '0x450bb6774Dd8a756274E0ab4107953259d2ac541',
+        },
+        expansionNetworks: ExpansionNetworks.mainnet,
+    },
+}
+
+const BTC_BTC: MarketPairConfig = {
+    GM: {
+        tokenSymbol: 'GM: BTC/USD [BTC-BTC]',
+        hubNetwork: {
+            eid: EndpointId.ARBITRUM_V2_MAINNET,
+            contractAddress: '0x7C11F78Ce78768518D743E81Fdfa2F860C6b9A77',
+        },
+        expansionNetworks: ExpansionNetworks.mainnet,
+    },
+}
+
 const WETH_USDC_SG: MarketPairConfig = {
     GM: {
         tokenSymbol: 'GM WETH-USDC.SG',
@@ -76,5 +98,7 @@ const WETH_USDC_SG: MarketPairConfig = {
 export const Tokens: Config = {
     WETH_USDC,
     WBTC_USDC,
+    WETH_WETH,
+    BTC_BTC,
     WETH_USDC_SG,
 }
