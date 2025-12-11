@@ -22,8 +22,8 @@ export interface TokenConfig {
  * Market pair configuration containing both GM and GLV tokens
  */
 export interface MarketPairConfig {
-    GM: TokenConfig
-    GLV: TokenConfig
+    GM?: TokenConfig
+    GLV?: TokenConfig
 }
 
 /**

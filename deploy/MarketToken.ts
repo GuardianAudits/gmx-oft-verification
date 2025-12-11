@@ -31,6 +31,12 @@ const deploy: DeployFunction = async (hre) => {
     const { marketPairKey, marketPairConfig } = await getDeployConfig()
     const gmConfig = marketPairConfig.GM
 
+    // Skip if GM token is not configured for this market pair
+    if (!gmConfig) {
+        console.log(`⏭️  Skipping GM deployment - GM token not configured for ${marketPairKey}`)
+        return
+    }
+
     const eid = hre.network.config.eid as EndpointId
     const networkName = hre.network.name
 

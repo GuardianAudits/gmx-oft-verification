@@ -31,6 +31,12 @@ const deploy: DeployFunction = async (hre) => {
     const { marketPairKey, marketPairConfig } = await getDeployConfig()
     const glvConfig = marketPairConfig.GLV
 
+    // Skip if GLV token is not configured for this market pair
+    if (!glvConfig) {
+        console.log(`⏭️  Skipping GLV deployment - GLV token not configured for ${marketPairKey}`)
+        return
+    }
+
     const eid = hre.network.config.eid as EndpointId
     const networkName = hre.network.name
 
