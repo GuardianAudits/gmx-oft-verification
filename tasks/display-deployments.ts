@@ -4,6 +4,40 @@ import path from 'path'
 import { task } from 'hardhat/config'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 
+/**
+ * Block explorer URLs for each network
+ */
+const BLOCK_EXPLORERS: Record<string, string> = {
+    'arbitrum-mainnet': 'https://arbiscan.io/address',
+    'base-mainnet': 'https://basescan.org/address',
+    'bera-mainnet': 'https://berascan.com/address',
+    'botanix-mainnet': 'https://botanixscan.io/address',
+    'bsc-mainnet': 'https://bscscan.com/address',
+    'ethereum-mainnet': 'https://etherscan.io/address',
+    'arbitrum-testnet': 'https://sepolia.arbiscan.io/address',
+    'ethereum-testnet': 'https://sepolia.etherscan.io/address',
+}
+
+/**
+ * Creates a clickable terminal link (works in most modern terminals)
+ */
+function createClickableLink(text: string, url: string): string {
+    // ANSI escape code for hyperlinks: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
+    return `\x1b]8;;${url}\x1b\\${text}\x1b]8;;\x1b\\`
+}
+
+/**
+ * Formats an address with a clickable link to block explorer
+ */
+function formatAddressLink(address: string, network: string): string {
+    const explorerBase = BLOCK_EXPLORERS[network]
+    if (explorerBase) {
+        const url = `${explorerBase}/${address}`
+        return createClickableLink(address, url)
+    }
+    return address // No link if explorer not configured
+}
+
 interface DeploymentInfo {
     network: string
     address: string
@@ -101,7 +135,8 @@ const displayDeployments = task(
                 console.log('     (none)')
             } else {
                 deployments.GM.forEach((dep) => {
-                    console.log(`     ${dep.network}: ${dep.address} (${dep.contractType})`)
+                    const addressLink = formatAddressLink(dep.address, dep.network)
+                    console.log(`     ${dep.network}: ${addressLink} (${dep.contractType})`)
                 })
             }
 
@@ -111,7 +146,8 @@ const displayDeployments = task(
                 console.log('     (none)')
             } else {
                 deployments.GLV.forEach((dep) => {
-                    console.log(`     ${dep.network}: ${dep.address} (${dep.contractType})`)
+                    const addressLink = formatAddressLink(dep.address, dep.network)
+                    console.log(`     ${dep.network}: ${addressLink} (${dep.contractType})`)
                 })
             }
 
